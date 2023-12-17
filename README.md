@@ -1,3 +1,7 @@
+## SUMBER DATA
+- https://github.com/guzfirdaus/Wilayah-Administrasi-Indonesia
+- https://github.com/edwardsamuel/Wilayah-Administratif-Indonesia
+  
 ## API
 DEMO : https://api-wilayah.up.railway.app
 
