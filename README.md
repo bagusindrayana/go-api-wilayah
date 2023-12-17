@@ -1,0 +1,13 @@
+## API
+- `/info` : informasi jumlah provinsi, kabupaten, kecamatan, dan desa
+- `/provinsi` : list provinsi
+- `/provinsi/{id}` : detail provinsi
+- `/kabupaten` : list kabupaten
+- `/provinsi/{id}/kabupaten` : list kabupaten berdasarkan provinsi
+- `/kabupaten/{id}` : detail kabupaten
+- `/kecamatan` : list kecamatan
+- `/kabupaten/{id}/kecamatan` : list kecamatan berdasarkan kabupaten
+- `/kecamatan/{id}` : detail kecamatan
+- `/desa` : list desa
+- `/kecamatan/{id}/desa` : list desa berdasarkan kecamatan
+- `/desa/{id}` : detail desa
