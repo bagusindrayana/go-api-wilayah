@@ -4,16 +4,39 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
+
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 var db *sql.DB
 
+func getEnv(key, defaultValue string) string {
+    value := os.Getenv(key)
+    if len(value) == 0 {
+        return defaultValue
+    }
+    return value
+}
+
 func initDB() {
+	var username string
+	var password string
+	var host string
+	var port string
+	var database string
 	var err error
-	db, err = sql.Open("mysql", "root@tcp(localhost:3306)/db_pendataan_pemilu")
+
+	//get env with default value
+	username = getEnv("DB_USERNAME", "root")
+	password = getEnv("DB_PASSWORD", "")
+	host = getEnv("DB_HOST", "localhost")
+	port = getEnv("DB_PORT", "3306")
+	database = getEnv("DB_DATABASE", "db_wilayah")
+
+	db, err = sql.Open("mysql", username+":"+password+"@tcp("+host+":"+port+")/"+database)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -92,7 +115,7 @@ func getProvinsi(c *gin.Context) {
 	c.JSON(200, provinsi)
 }
 
-//get detail provinsi
+// get detail provinsi
 // hitung jumlah kabupaten kode, kecamatan dan kelurahan
 func getDetailProvinsi(c *gin.Context) {
 	idProvinsi := c.Param("id")
@@ -148,9 +171,8 @@ func getKabupatenAll(c *gin.Context) {
 	searchQuery := c.Query("search")
 	// page and limit default value is 1 and 10
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	
+
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	
 
 	offset := (page - 1) * limit
 
@@ -183,7 +205,6 @@ func getKabupatenAll(c *gin.Context) {
 
 	c.JSON(200, kabupaten)
 }
-
 
 // get kabupaten by provinsi
 func getKabupaten(c *gin.Context) {
@@ -258,14 +279,13 @@ func getDetailKabupaten(c *gin.Context) {
 	c.JSON(200, kabupaten)
 }
 
-//get all kecamatan with pagination and limit, search by name
+// get all kecamatan with pagination and limit, search by name
 func getKecamatanAll(c *gin.Context) {
 	searchQuery := c.Query("search")
 	// page and limit default value is 1 and 10
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	
+
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	
 
 	offset := (page - 1) * limit
 
@@ -327,7 +347,7 @@ func getKecamatan(c *gin.Context) {
 	c.JSON(200, kecamatan)
 }
 
-//get detail kecamatan
+// get detail kecamatan
 // hitung jumlah kelurahan
 func getDetailKecamatan(c *gin.Context) {
 	idKecamatan := c.Param("id")
@@ -358,7 +378,7 @@ func getDetailKecamatan(c *gin.Context) {
 
 		kecamatan = map[string]interface{}{
 			"id":               id,
-			"nama_kecamatan":    nama_kecamatan,
+			"nama_kecamatan":   nama_kecamatan,
 			"jumlah_kelurahan": jumlahKelurahan,
 		}
 	}
@@ -371,9 +391,8 @@ func getKelurahanAll(c *gin.Context) {
 	searchQuery := c.Query("search")
 	// page and limit default value is 1 and 10
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	
+
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	
 
 	offset := (page - 1) * limit
 
@@ -435,7 +454,7 @@ func getKelurahan(c *gin.Context) {
 	c.JSON(200, kelurahan)
 }
 
-//get detail kelurahan
+// get detail kelurahan
 func getDetailKelurahan(c *gin.Context) {
 	idKelurahan := c.Param("id")
 
@@ -459,8 +478,8 @@ func getDetailKelurahan(c *gin.Context) {
 		}
 
 		kelurahan = map[string]interface{}{
-			"id":               id,
-			"nama_kelurahan_desa":    nama_kelurahan_desa,
+			"id":                  id,
+			"nama_kelurahan_desa": nama_kelurahan_desa,
 		}
 	}
 
@@ -493,5 +512,5 @@ func main() {
 	router.GET("/kelurahan/:id", getDetailKelurahan)
 
 	// Jalankan server
-	router.Run(":8080")
+	router.Run()
 }
