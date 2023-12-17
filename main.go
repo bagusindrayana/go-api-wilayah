@@ -511,12 +511,12 @@ func main() {
 	router.GET("/provinsi", getProvinsi)
 	router.GET("/provinsi/:id", getDetailProvinsi)
 
-	router.GET("/kabupaten", getKabupatenAll)
-	router.GET("/provinsi/:id/kabupaten", getKabupaten)
-	router.GET("/kabupaten/:id", getDetailKabupaten)
+	router.GET("/kota", getKabupatenAll)
+	router.GET("/provinsi/:id/kota", getKabupaten)
+	router.GET("/kota/:id", getDetailKabupaten)
 
 	router.GET("/kecamatan", getKecamatanAll)
-	router.GET("/kabupaten/:id/kecamatan", getKecamatan)
+	router.GET("/kota/:id/kecamatan", getKecamatan)
 	router.GET("/kecamatan/:id", getDetailKecamatan)
 
 	router.GET("/kelurahan", getKelurahanAll)

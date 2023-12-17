@@ -1,12 +1,15 @@
 ## API
-- `/info` : informasi jumlah provinsi, kabupaten, kecamatan, dan desa
+DEMO : https://api-wilayah.up.railway.app
+
+
+- `/info` : informasi jumlah provinsi, kabupaten/kota, kecamatan, dan desa
 - `/provinsi` : list provinsi
 - `/provinsi/{id}` : detail provinsi
-- `/kabupaten` : list kabupaten
-- `/provinsi/{id}/kabupaten` : list kabupaten berdasarkan provinsi
-- `/kabupaten/{id}` : detail kabupaten
+- `/kota` : list kabupaten/kota
+- `/provinsi/{id}/kabupaten` : list kabupaten/kota berdasarkan provinsi
+- `/kota/{id}` : detail kabupaten/kota
 - `/kecamatan` : list kecamatan
-- `/kabupaten/{id}/kecamatan` : list kecamatan berdasarkan kabupaten
+- `/kota/{id}/kecamatan` : list kecamatan berdasarkan kabupaten/kota
 - `/kecamatan/{id}` : detail kecamatan
 - `/desa` : list desa
 - `/kecamatan/{id}/desa` : list desa berdasarkan kecamatan
