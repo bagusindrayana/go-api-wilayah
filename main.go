@@ -27,6 +27,7 @@ func initDB() {
 	var host string
 	var port string
 	var database string
+	var dns string
 	var err error
 
 	//get env with default value
@@ -35,11 +36,22 @@ func initDB() {
 	host = getEnv("DB_HOST", "localhost")
 	port = getEnv("DB_PORT", "3306")
 	database = getEnv("DB_DATABASE", "db_wilayah")
+	dns = getEnv("DB_DNS", "local")
 
-	db, err = sql.Open("mysql", username+":"+password+"@tcp("+host+":"+port+")/"+database)
-	if err != nil {
-		log.Fatal(err)
+	if dns == "local" {
+		db, err = sql.Open("mysql", username+":"+password+"@tcp("+host+":"+port+")/"+database)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		db, err = sql.Open("mysql", dns)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
+	
+
+	
 
 	err = db.Ping()
 	if err != nil {
