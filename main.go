@@ -15,6 +15,7 @@ import (
 )
 
 var db *sql.DB
+var driver string
 
 func getEnv(key, defaultValue string) string {
 
@@ -30,7 +31,7 @@ func initDB() {
 	var host string
 	var port string
 	var database string
-	var driver string
+
 	var err error
 
 	//get env with default value
@@ -122,7 +123,11 @@ func getProvinsi(c *gin.Context) {
 
 	if searchQuery != "" {
 		// Jika ada parameter search, lakukan pencarian berdasarkan nama
-		rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis WHERE nama_provinsi LIKE ? ORDER BY id ASC", "%"+searchQuery+"%")
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis WHERE nama_provinsi LIKE ? ORDER BY id ASC", "%"+searchQuery+"%")
+		} else {
+			rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis WHERE nama_provinsi LIKE $1 ORDER BY id ASC", "%"+searchQuery+"%")
+		}
 	} else {
 		// Jika tidak ada parameter search, ambil semua data provinsi
 		rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis ORDER BY id ASC")
@@ -151,12 +156,15 @@ func getProvinsi(c *gin.Context) {
 // hitung jumlah kabupaten kode, kecamatan dan kelurahan
 func getDetailProvinsi(c *gin.Context) {
 	idProvinsi := c.Param("id")
-
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis WHERE id = ?", idProvinsi)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis WHERE id = ?", idProvinsi)
+	} else {
+		rows, err = db.Query("SELECT id, nama_provinsi FROM provinsis WHERE id = $1", idProvinsi)
 
+	}
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
@@ -173,9 +181,16 @@ func getDetailProvinsi(c *gin.Context) {
 		var jumlahKabupaten int
 		var jumlahKecamatan int
 		var jumlahKelurahan int
-		rowCountKabupaten := db.QueryRow("SELECT COUNT(*) FROM kab_kotas WHERE provinsi_id = ?", id).Scan(&jumlahKabupaten)
-		rowCountKecamatan := db.QueryRow("SELECT COUNT(*) FROM kecamatans LEFT JOIN kab_kotas ON kecamatans.kab_kota_id = kab_kotas.id WHERE kab_kotas.provinsi_id = ?", id).Scan(&jumlahKecamatan)
-		rowCountKelurahan := db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas LEFT JOIN kecamatans ON kelurahan_desas.kecamatan_id = kecamatans.id LEFT JOIN kab_kotas ON kecamatans.kab_kota_id = kab_kotas.id WHERE kab_kotas.provinsi_id = ?", id).Scan(&jumlahKelurahan)
+		var rowCountKabupaten, rowCountKecamatan, rowCountKelurahan error
+		if driver == "mysql" {
+			rowCountKabupaten = db.QueryRow("SELECT COUNT(*) FROM kab_kotas WHERE provinsi_id = ?", id).Scan(&jumlahKabupaten)
+			rowCountKecamatan = db.QueryRow("SELECT COUNT(*) FROM kecamatans LEFT JOIN kab_kotas ON kecamatans.kab_kota_id = kab_kotas.id WHERE kab_kotas.provinsi_id = ?", id).Scan(&jumlahKecamatan)
+			rowCountKelurahan = db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas LEFT JOIN kecamatans ON kelurahan_desas.kecamatan_id = kecamatans.id LEFT JOIN kab_kotas ON kecamatans.kab_kota_id = kab_kotas.id WHERE kab_kotas.provinsi_id = ?", id).Scan(&jumlahKelurahan)
+		} else {
+			rowCountKabupaten = db.QueryRow("SELECT COUNT(*) FROM kab_kotas WHERE provinsi_id = $1", id).Scan(&jumlahKabupaten)
+			rowCountKecamatan = db.QueryRow("SELECT COUNT(*) FROM kecamatans LEFT JOIN kab_kotas ON kecamatans.kab_kota_id = kab_kotas.id WHERE kab_kotas.provinsi_id = $1", id).Scan(&jumlahKecamatan)
+			rowCountKelurahan = db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas LEFT JOIN kecamatans ON kelurahan_desas.kecamatan_id = kecamatans.id LEFT JOIN kab_kotas ON kecamatans.kab_kota_id = kab_kotas.id WHERE kab_kotas.provinsi_id = $1", id).Scan(&jumlahKelurahan)
+		}
 		if rowCountKabupaten != nil {
 			log.Fatal(rowCountKabupaten)
 		}
@@ -213,10 +228,19 @@ func getKabupatenAll(c *gin.Context) {
 
 	if searchQuery != "" {
 		// Jika ada parameter search, lakukan pencarian berdasarkan nama
-		rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE nama_kab_kota LIKE ?  ORDER BY id ASC LIMIT ? OFFSET ?", "%"+searchQuery+"%", limit, offset)
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE nama_kab_kota LIKE ?  ORDER BY id ASC LIMIT ? OFFSET ?", "%"+searchQuery+"%", limit, offset)
+		} else {
+			rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE nama_kab_kota LIKE $1  ORDER BY id ASC LIMIT $2 OFFSET $3", "%"+searchQuery+"%", limit, offset)
+
+		}
 	} else {
 		// Jika tidak ada parameter search, ambil semua data provinsi
-		rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
+		} else {
+			rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
+		}
 	}
 
 	if err != nil {
@@ -245,7 +269,12 @@ func getKabupaten(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE provinsi_id = ? ORDER BY id ASC", idProvinsi)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE provinsi_id = ? ORDER BY id ASC", idProvinsi)
+	} else {
+		rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE provinsi_id = $1 ORDER BY id ASC", idProvinsi)
+
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -274,7 +303,12 @@ func getDetailKabupaten(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE id = ?", idKabupaten)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE id = ?", idKabupaten)
+	} else {
+		rows, err = db.Query("SELECT id, nama_kab_kota FROM kab_kotas WHERE id = $1", idKabupaten)
+
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -291,8 +325,14 @@ func getDetailKabupaten(c *gin.Context) {
 		}
 		var jumlahKecamatan int
 		var jumlahKelurahan int
-		rowCountKecamatan := db.QueryRow("SELECT COUNT(*) FROM kecamatans WHERE kab_kota_id = ?", id).Scan(&jumlahKecamatan)
-		rowCountKelurahan := db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas LEFT JOIN kecamatans ON kelurahan_desas.kecamatan_id = kecamatans.id WHERE kecamatans.kab_kota_id = ?", id).Scan(&jumlahKelurahan)
+		var rowCountKecamatan, rowCountKelurahan error
+		if driver == "mysql" {
+			rowCountKecamatan = db.QueryRow("SELECT COUNT(*) FROM kecamatans WHERE kab_kota_id = ?", id).Scan(&jumlahKecamatan)
+			rowCountKelurahan = db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas LEFT JOIN kecamatans ON kelurahan_desas.kecamatan_id = kecamatans.id WHERE kecamatans.kab_kota_id = ?", id).Scan(&jumlahKelurahan)
+		} else {
+			rowCountKecamatan = db.QueryRow("SELECT COUNT(*) FROM kecamatans WHERE kab_kota_id = $1", id).Scan(&jumlahKecamatan)
+			rowCountKelurahan = db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas LEFT JOIN kecamatans ON kelurahan_desas.kecamatan_id = kecamatans.id WHERE kecamatans.kab_kota_id = $1", id).Scan(&jumlahKelurahan)
+		}
 		if rowCountKecamatan != nil {
 			log.Fatal(rowCountKecamatan)
 		}
@@ -326,10 +366,18 @@ func getKecamatanAll(c *gin.Context) {
 
 	if searchQuery != "" {
 		// Jika ada parameter search, lakukan pencarian berdasarkan nama
-		rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE nama_kecamatan LIKE ?  ORDER BY id ASC LIMIT ? OFFSET ?", "%"+searchQuery+"%", limit, offset)
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE nama_kecamatan LIKE ?  ORDER BY id ASC LIMIT ? OFFSET ?", "%"+searchQuery+"%", limit, offset)
+		} else {
+			rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE nama_kecamatan LIKE $1  ORDER BY id ASC LIMIT $2 OFFSET $3", "%"+searchQuery+"%", limit, offset)
+		}
 	} else {
 		// Jika tidak ada parameter search, ambil semua data provinsi
-		rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
+		} else {
+			rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
+		}
 	}
 
 	if err != nil {
@@ -358,7 +406,12 @@ func getKecamatan(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE kab_kota_id = ? ORDER BY id ASC", idKabupaten)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE kab_kota_id = ? ORDER BY id ASC", idKabupaten)
+	} else {
+		rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE kab_kota_id = $1 ORDER BY id ASC", idKabupaten)
+
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -387,7 +440,12 @@ func getDetailKecamatan(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE id = ?", idKecamatan)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE id = ?", idKecamatan)
+	} else {
+		rows, err = db.Query("SELECT id, nama_kecamatan FROM kecamatans WHERE id = $1", idKecamatan)
+
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -403,7 +461,12 @@ func getDetailKecamatan(c *gin.Context) {
 			log.Fatal(err)
 		}
 		var jumlahKelurahan int
-		rowCountKelurahan := db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas WHERE kecamatan_id = ?", id).Scan(&jumlahKelurahan)
+		var rowCountKelurahan error
+		if driver == "mysql" {
+			rowCountKelurahan = db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas WHERE kecamatan_id = ?", id).Scan(&jumlahKelurahan)
+		} else {
+			rowCountKelurahan = db.QueryRow("SELECT COUNT(*) FROM kelurahan_desas WHERE kecamatan_id = $1", id).Scan(&jumlahKelurahan)
+		}
 		if rowCountKelurahan != nil {
 			log.Fatal(rowCountKelurahan)
 		}
@@ -433,10 +496,20 @@ func getKelurahanAll(c *gin.Context) {
 
 	if searchQuery != "" {
 		// Jika ada parameter search, lakukan pencarian berdasarkan nama
-		rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE nama_kelurahan_desa LIKE ?  ORDER BY id ASC LIMIT ? OFFSET ?", "%"+searchQuery+"%", limit, offset)
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE nama_kelurahan_desa LIKE ?  ORDER BY id ASC LIMIT ? OFFSET ?", "%"+searchQuery+"%", limit, offset)
+		} else {
+			rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE nama_kelurahan_desa LIKE $1  ORDER BY id ASC LIMIT $2 OFFSET $3", "%"+searchQuery+"%", limit, offset)
+
+		}
 	} else {
 		// Jika tidak ada parameter search, ambil semua data provinsi
-		rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
+		if driver == "mysql" {
+			rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas ORDER BY id ASC LIMIT ? OFFSET ?", limit, offset)
+		} else {
+			rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas ORDER BY id ASC LIMIT $1 OFFSET $2", limit, offset)
+
+		}
 	}
 
 	if err != nil {
@@ -465,7 +538,11 @@ func getKelurahan(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE kecamatan_id = ? ORDER BY id ASC", idKecamatan)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE kecamatan_id = ? ORDER BY id ASC", idKecamatan)
+	} else {
+		rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE kecamatan_id = $1 ORDER BY id ASC", idKecamatan)
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
@@ -493,7 +570,11 @@ func getDetailKelurahan(c *gin.Context) {
 	var rows *sql.Rows
 	var err error
 
-	rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE id = ?", idKelurahan)
+	if driver == "mysql" {
+		rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE id = ?", idKelurahan)
+	} else {
+		rows, err = db.Query("SELECT id, nama_kelurahan_desa FROM kelurahan_desas WHERE id = $1", idKelurahan)
+	}
 
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
