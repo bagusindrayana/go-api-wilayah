@@ -38,7 +38,7 @@ func initDB() {
 	password = getEnv("DB_PASSWORD", "")
 	host = getEnv("DB_HOST", "localhost")
 	port = getEnv("DB_PORT", "3306")
-	database = getEnv("DB_DATABASE", "database")
+	database = getEnv("DB_DATABASE", "db_wilayah")
 	driver = getEnv("DB_DRIVER", "mysql")
 
 	if driver == "mysql" {
@@ -521,7 +521,7 @@ func getDetailKelurahan(c *gin.Context) {
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		log.Fatalf("Some error occured. Err: %s", err)
+		log.Default().Println("No .env file found")
 	}
 	initDB()
 	checkTableExist()
