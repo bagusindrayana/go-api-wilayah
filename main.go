@@ -604,12 +604,17 @@ func main() {
 	if err != nil {
 		log.Default().Println("No .env file found")
 	}
+
+	port := getEnv("PORT", "8080")
+	if port == "" {
+		port = "8080"
+	}
 	initDB()
 	checkTableExist()
 	defer db.Close()
 
 	// Mulai membuat API menggunakan Gin
-	router := gin.New()
+	router := gin.Default()
 
 	router.GET("/", info)
 
@@ -628,14 +633,6 @@ func main() {
 	router.GET("/kelurahan", getKelurahanAll)
 	router.GET("/kecamatan/:id/kelurahan", getKelurahan)
 	router.GET("/kelurahan/:id", getDetailKelurahan)
-
-	// Jalankan server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	if err := router.Run(":" + port); err != nil {
-		log.Panicf("error: %s", err)
-	}
+	router.Run("0.0.0.0:" + port)
 
 }
