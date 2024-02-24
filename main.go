@@ -14,11 +14,11 @@ import (
 var db *sql.DB
 
 func getEnv(key, defaultValue string) string {
-    value := os.Getenv(key)
-    if len(value) == 0 {
-        return defaultValue
-    }
-    return value
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return defaultValue
+	}
+	return value
 }
 
 func initDB() {
@@ -49,9 +49,6 @@ func initDB() {
 			log.Fatal(err)
 		}
 	}
-	
-
-	
 
 	err = db.Ping()
 	if err != nil {
@@ -503,7 +500,7 @@ func main() {
 	defer db.Close()
 
 	// Mulai membuat API menggunakan Gin
-	router := gin.Default()
+	router := gin.New()
 
 	router.GET("/", info)
 
@@ -524,5 +521,12 @@ func main() {
 	router.GET("/kelurahan/:id", getDetailKelurahan)
 
 	// Jalankan server
-	router.Run()
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if err := router.Run(":" + port); err != nil {
+		log.Panicf("error: %s", err)
+	}
+
 }
