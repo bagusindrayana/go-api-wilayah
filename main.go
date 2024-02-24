@@ -7,27 +7,30 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 var db *sql.DB
 
 func getEnv(key, defaultValue string) string {
+
 	value := os.Getenv(key)
 	if len(value) == 0 {
 		return defaultValue
 	}
 	return value
 }
-
 func initDB() {
 	var username string
 	var password string
 	var host string
 	var port string
 	var database string
-	var dns string
+	var driver string
 	var err error
 
 	//get env with default value
@@ -35,19 +38,21 @@ func initDB() {
 	password = getEnv("DB_PASSWORD", "")
 	host = getEnv("DB_HOST", "localhost")
 	port = getEnv("DB_PORT", "3306")
-	database = getEnv("DB_DATABASE", "db_wilayah")
-	dns = getEnv("DB_DNS", "local")
+	database = getEnv("DB_DATABASE", "database")
+	driver = getEnv("DB_DRIVER", "mysql")
 
-	if dns == "local" {
+	if driver == "mysql" {
 		db, err = sql.Open("mysql", username+":"+password+"@tcp("+host+":"+port+")/"+database)
 		if err != nil {
 			log.Fatal(err)
 		}
-	} else {
-		db, err = sql.Open("mysql", dns)
+	} else if driver == "postgres" {
+		db, err = sql.Open("postgres", "postgresql://"+username+":"+password+"@"+host+"/"+database)
 		if err != nil {
 			log.Fatal(err)
 		}
+	} else {
+		log.Fatal("Database driver not supported")
 	}
 
 	err = db.Ping()
@@ -56,6 +61,24 @@ func initDB() {
 	}
 
 	fmt.Println("Connected to the database")
+}
+
+// cek tabel exist
+func checkTableExist() {
+
+	_, err := db.Query("SELECT 1 FROM provinsis LIMIT 1")
+	if err != nil {
+		_, err = db.Query("SELECT 1 FROM kab_kotas LIMIT 1")
+		if err != nil {
+			_, err = db.Query("SELECT 1 FROM kecamatans LIMIT 1")
+			if err != nil {
+				_, err = db.Query("SELECT 1 FROM kelurahan_desas LIMIT 1")
+				if err != nil {
+					log.Fatal("Table not exist")
+				}
+			}
+		}
+	}
 }
 
 func info(c *gin.Context) {
@@ -496,7 +519,12 @@ func getDetailKelurahan(c *gin.Context) {
 }
 
 func main() {
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Some error occured. Err: %s", err)
+	}
 	initDB()
+	checkTableExist()
 	defer db.Close()
 
 	// Mulai membuat API menggunakan Gin
